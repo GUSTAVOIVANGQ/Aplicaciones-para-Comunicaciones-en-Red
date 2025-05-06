@@ -1,4 +1,0 @@
------ TICKET DE COMPRA -----
-Producto: Laptop | Cantidad: 3 | Precio Unitario: 1500.00 | Subtotal: 4500.00
-
-TOTAL: 4500.00

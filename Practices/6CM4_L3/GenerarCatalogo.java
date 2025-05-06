@@ -10,6 +10,11 @@ public class GenerarCatalogo {
         catalogo.add(new Producto(3, "Tablet", "Tablet para uso profesional", 7, 600.0, true));
         catalogo.add(new Producto(4, "Auriculares", "Auriculares inalámbricos con cancelación de ruido", 15, 200.0, true));
         catalogo.add(new Producto(5, "Monitor", "Monitor 4K UHD de 27 pulgadas", 8, 350.0, true));
+        catalogo.add(new Producto(6, "Teclado mecánico", "Teclado gaming con switches RGB", 20, 120.0, true));
+        catalogo.add(new Producto(7, "Mouse inalámbrico", "Mouse ergonómico de alta precisión", 25, 45.0, true));
+        catalogo.add(new Producto(8, "Disco SSD", "Disco de estado sólido 1TB", 12, 130.0, true));
+        catalogo.add(new Producto(9, "Cámara web", "Cámara HD para videoconferencias", 10, 80.0, true));
+        catalogo.add(new Producto(10, "Impresora", "Impresora multifunción inalámbrica", 5, 250.0, true));
 
         // Serializar el catálogo en un archivo
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("catalogo_productos.ser"))) {

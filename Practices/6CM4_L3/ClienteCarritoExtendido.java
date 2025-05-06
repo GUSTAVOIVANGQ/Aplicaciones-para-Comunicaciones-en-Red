@@ -36,19 +36,29 @@ public class ClienteCarritoExtendido {
                 System.out.println("5. Enviar imágenes al servidor");
                 System.out.println("6. Finalizar compra y generar ticket en PDF");
                 System.out.println("0. Salir");
-                System.out.print("Seleccione una opción: ");
-                opcion = scanner.nextInt();
+                System.out.print("Seleccione una opción: ");                opcion = scanner.nextInt();
                 scanner.nextLine(); // Consumir el salto de línea
-
+                
                 switch (opcion) {
                     case 1:
                         agregarProductoAlCarrito(scanner, catalogo);
-                        break;
-                    case 2:
-                        eliminarProductoDelCarrito(scanner);
+                        System.out.println("\n--- Carrito Actualizado ---");
+                        consultarCarrito(); // Mostrar el carrito actualizado
+                        System.out.println("\n--- Catálogo Actualizado ---");
+                        mostrarCatalogo(catalogo);
+                        break;                    case 2:
+                        eliminarProductoDelCarrito(scanner, catalogo);
+                        System.out.println("\n--- Carrito Actualizado ---");
+                        consultarCarrito(); // Mostrar el carrito actualizado
+                        System.out.println("\n--- Catálogo Actualizado ---");
+                        mostrarCatalogo(catalogo);
                         break;
                     case 3:
-                        modificarCantidadEnCarrito(scanner);
+                        modificarCantidadEnCarrito(scanner, catalogo);
+                        System.out.println("\n--- Carrito Actualizado ---");
+                        consultarCarrito(); // Mostrar el carrito actualizado
+                        System.out.println("\n--- Catálogo Actualizado ---");
+                        mostrarCatalogo(catalogo);
                         break;
                     case 4:
                         consultarCarrito();
@@ -75,59 +85,303 @@ public class ClienteCarritoExtendido {
     }
 
     private static void mostrarCatalogo(ArrayList<Producto> catalogo) {
+        System.out.println("\n--- Catálogo de Productos ---");
+        System.out.println("+-------+---------------------+-----------------------------+------------+---------+---------------+");
+        System.out.println("| ID    | Nombre              | Descripción                 | Existencias | Precio  | Disponible    |");
+        System.out.println("+-------+---------------------+-----------------------------+------------+---------+---------------+");
+        
         for (Producto producto : catalogo) {
-            System.out.println(producto);
+            System.out.printf("| %-5d | %-19s | %-27s | %-10d | $%-6.2f | %-13s |\n",
+                    producto.getId(),
+                    limitarTexto(producto.getNombre(), 19),
+                    limitarTexto(producto.getDescripcion(), 27),
+                    producto.getExistencias(),
+                    producto.getPrecio(),
+                    producto.isDisponible() ? "Sí" : "No");
         }
-    }
-
-    private static void agregarProductoAlCarrito(Scanner scanner, ArrayList<Producto> catalogo) {
-        System.out.print("Ingrese el ID del producto a agregar: ");
-        int id = scanner.nextInt();
-        scanner.nextLine(); // Consumir el salto de línea
-
-        for (Producto producto : catalogo) {
-            if (producto.getId() == id) {
-                System.out.print("Ingrese la cantidad: ");
-                int cantidad = scanner.nextInt();
-                scanner.nextLine(); // Consumir el salto de línea
-
-                Producto productoEnCarrito = new Producto(
-                        producto.getId(), producto.getNombre(), producto.getDescripcion(),
-                        cantidad, producto.getPrecio(), producto.isDisponible()
-                );
-                carrito.add(productoEnCarrito);
-                System.out.println("Producto agregado al carrito.");
-                return;
+        
+        System.out.println("+-------+---------------------+-----------------------------+------------+---------+---------------+");
+    }private static void agregarProductoAlCarrito(Scanner scanner, ArrayList<Producto> catalogo) {
+        int id;
+        boolean idValido = false;
+        
+        do {
+            System.out.print("Ingrese el ID del producto a agregar: ");
+            try {
+                if (scanner.hasNextInt()) {
+                    id = scanner.nextInt();
+                    if (id <= 0) {
+                        System.out.println("Error: El ID debe ser un número positivo.");
+                        scanner.nextLine(); // Consumir el salto de línea
+                        continue;
+                    }
+                    
+                    // Buscar el producto en el catálogo
+                    boolean encontrado = false;
+                    for (Producto producto : catalogo) {
+                        if (producto.getId() == id) {
+                            encontrado = true;
+                            if (!producto.isDisponible()) {
+                                System.out.println("Error: El producto no está disponible actualmente.");
+                                break;
+                            }
+                              boolean cantidadValida = false;
+                            do {
+                                System.out.print("Ingrese la cantidad: ");
+                                try {
+                                    if (scanner.hasNextInt()) {
+                                        int cantidad = scanner.nextInt();
+                                        scanner.nextLine(); // Consumir el salto de línea
+                                        
+                                        // Validar que sea un número positivo
+                                        if (cantidad <= 0) {
+                                            System.out.println("Error: La cantidad debe ser un número positivo.");
+                                        } 
+                                        // Validar que no exceda las existencias disponibles
+                                        else if (cantidad > producto.getExistencias()) {
+                                            System.out.println("Error: La cantidad solicitada (" + cantidad + 
+                                                ") excede las existencias disponibles (" + producto.getExistencias() + ").");
+                                        }                                        else {
+                                            Producto productoEnCarrito = new Producto(
+                                                    producto.getId(), producto.getNombre(), producto.getDescripcion(),
+                                                    cantidad, producto.getPrecio(), producto.isDisponible()
+                                            );
+                                            carrito.add(productoEnCarrito);
+                                            
+                                            // Actualizar las existencias en el catálogo
+                                            int nuevasExistencias = producto.getExistencias() - cantidad;
+                                            producto.setExistencias(nuevasExistencias);
+                                            
+                                            System.out.println("Producto agregado al carrito.");
+                                            cantidadValida = true;
+                                            idValido = true;
+                                        }
+                                    } else {
+                                        System.out.println("Error: Debe ingresar un número entero válido para la cantidad.");
+                                        scanner.next(); // Consumir la entrada inválida
+                                        scanner.nextLine(); // Consumir el salto de línea
+                                    }
+                                } catch (Exception e) {
+                                    System.err.println("Error al ingresar la cantidad: " + e.getMessage());
+                                    scanner.nextLine(); // Consumir la entrada inválida
+                                }
+                                
+                                if (!cantidadValida) {
+                                    System.out.print("¿Desea intentar con otra cantidad? (S/N): ");
+                                    String respuesta = scanner.next().trim().toUpperCase();
+                                    scanner.nextLine(); // Consumir el salto de línea
+                                    if (!respuesta.equals("S")) {
+                                        break; // Salir del bucle de cantidad
+                                    }
+                                }
+                            } while (!cantidadValida);
+                            
+                            if (cantidadValida) {
+                                break; // Salir del bucle principal si se agregó correctamente
+                            }
+                        }
+                    }
+                    
+                    if (!encontrado) {
+                        System.out.println("Error: El producto con ID " + id + " no existe en el catálogo.");
+                        // Mostrar los IDs disponibles para ayudar al usuario
+                        System.out.println("IDs disponibles en el catálogo:");
+                        for (Producto p : catalogo) {
+                            System.out.println("- ID: " + p.getId() + ", Nombre: " + p.getNombre());
+                        }
+                    }
+                } else {
+                    System.out.println("Error: Debe ingresar un número entero válido.");
+                    scanner.next(); // Consumir la entrada inválida
+                }
+            } catch (Exception e) {
+                System.err.println("Error de entrada: " + e.getMessage());
+                scanner.nextLine(); // Consumir la entrada inválida
             }
-        }
-        System.out.println("Producto no encontrado en el catálogo.");
-    }
-
-    private static void eliminarProductoDelCarrito(Scanner scanner) {
-        System.out.print("Ingrese el ID del producto a eliminar del carrito: ");
-        int id = scanner.nextInt();
-        scanner.nextLine(); // Consumir el salto de línea
-
-        carrito.removeIf(producto -> producto.getId() == id);
-        System.out.println("Producto eliminado del carrito (si existía).");
-    }
-
-    private static void modificarCantidadEnCarrito(Scanner scanner) {
-        System.out.print("Ingrese el ID del producto a modificar: ");
-        int id = scanner.nextInt();
-        scanner.nextLine(); // Consumir el salto de línea
-
-        for (Producto producto : carrito) {
-            if (producto.getId() == id) {
-                System.out.print("Ingrese la nueva cantidad: ");
-                int cantidad = scanner.nextInt();
+            
+            if (!idValido) {
+                System.out.print("¿Desea intentarlo de nuevo? (S/N): ");
+                String respuesta = scanner.next().trim().toUpperCase();
                 scanner.nextLine(); // Consumir el salto de línea
-                producto.setExistencias(cantidad);
-                System.out.println("Cantidad actualizada.");
-                return;
+                if (!respuesta.equals("S")) {
+                    return;
+                }
             }
+            
+        } while (!idValido);
+    }    private static void eliminarProductoDelCarrito(Scanner scanner, ArrayList<Producto> catalogo) {
+        if (carrito.isEmpty()) {
+            System.out.println("El carrito está vacío. No hay productos para eliminar.");
+            return;
         }
-        System.out.println("Producto no encontrado en el carrito.");
+        
+        boolean idValido = false;
+        
+        do {
+            System.out.print("Ingrese el ID del producto a eliminar del carrito: ");
+            try {
+                if (scanner.hasNextInt()) {
+                    final int idProducto = scanner.nextInt();
+                    if (idProducto <= 0) {
+                        System.out.println("Error: El ID debe ser un número positivo.");
+                    } else {
+                        // Verificar si el producto existe en el carrito
+                        boolean existeEnCarrito = false;
+                        for (Producto producto : carrito) {
+                            if (producto.getId() == idProducto) {
+                                existeEnCarrito = true;
+                                break;
+                            }
+                        }
+                          if (existeEnCarrito) {
+                            // Obtener la cantidad del producto en el carrito antes de eliminarlo
+                            int cantidadEnCarrito = 0;
+                            for (Producto p : carrito) {
+                                if (p.getId() == idProducto) {
+                                    cantidadEnCarrito += p.getExistencias();
+                                }
+                            }
+                            
+                            // Devolver la cantidad al catálogo
+                            for (Producto p : catalogo) {
+                                if (p.getId() == idProducto) {
+                                    p.setExistencias(p.getExistencias() + cantidadEnCarrito);
+                                    break;
+                                }
+                            }
+                            
+                            // Eliminar el producto del carrito
+                            carrito.removeIf(producto -> producto.getId() == idProducto);
+                            System.out.println("Producto con ID " + idProducto + " eliminado del carrito.");
+                            idValido = true;
+                        } else {
+                            System.out.println("Error: No existe ningún producto con ID " + idProducto + " en el carrito.");
+                            // Mostrar los productos en el carrito para ayudar al usuario
+                            System.out.println("Productos en el carrito:");
+                            for (Producto p : carrito) {
+                                System.out.println("- ID: " + p.getId() + ", Nombre: " + p.getNombre());
+                            }
+                        }
+                    }
+                } else {
+                    System.out.println("Error: Debe ingresar un número entero válido.");
+                    scanner.next(); // Consumir la entrada inválida
+                }
+            } catch (Exception e) {
+                System.err.println("Error de entrada: " + e.getMessage());
+                scanner.nextLine(); // Consumir la entrada inválida
+            }
+            
+            if (!idValido) {
+                scanner.nextLine(); // Consumir el salto de línea si es necesario
+                System.out.print("¿Desea intentarlo de nuevo? (S/N): ");
+                String respuesta = scanner.next().trim().toUpperCase();
+                scanner.nextLine(); // Consumir el salto de línea
+                if (!respuesta.equals("S")) {
+                    return;
+                }
+            }
+        } while (!idValido);
+    }    private static void modificarCantidadEnCarrito(Scanner scanner, ArrayList<Producto> catalogo) {
+        if (carrito.isEmpty()) {
+            System.out.println("El carrito está vacío. No hay productos para modificar.");
+            return;
+        }
+        
+        boolean idValido = false;
+        
+        do {
+            System.out.print("Ingrese el ID del producto a modificar: ");
+            try {
+                if (scanner.hasNextInt()) {
+                    final int idProducto = scanner.nextInt();
+                    if (idProducto <= 0) {
+                        System.out.println("Error: El ID debe ser un número positivo.");
+                    } else {
+                        // Buscar el producto en el carrito
+                        boolean encontrado = false;
+                        for (Producto producto : carrito) {
+                            if (producto.getId() == idProducto) {
+                                encontrado = true;
+                                try {                                    System.out.print("Ingrese la nueva cantidad: ");
+                                    if (scanner.hasNextInt()) {
+                                        int cantidad = scanner.nextInt();
+                                        if (cantidad <= 0) {
+                                            System.out.println("Error: La cantidad debe ser un número positivo.");
+                                        } else {
+                                            // Buscar el producto en el catálogo para verificar existencias disponibles
+                                            boolean excededStock = false;
+                                            for (Producto productoCatalogo : catalogo) {
+                                                if (productoCatalogo.getId() == idProducto) {
+                                                    if (cantidad > productoCatalogo.getExistencias()) {
+                                                        System.out.println("Error: La cantidad solicitada (" + cantidad + 
+                                                            ") excede las existencias disponibles (" + 
+                                                            productoCatalogo.getExistencias() + ").");
+                                                        excededStock = true;
+                                                    }
+                                                    break;
+                                                }
+                                            }
+                                              if (!excededStock) {
+                                                // Calcular la diferencia de cantidad
+                                                int cantidadAnterior = producto.getExistencias();
+                                                int diferencia = cantidad - cantidadAnterior;
+                                                
+                                                // Actualizar la cantidad en el carrito
+                                                producto.setExistencias(cantidad);
+                                                
+                                                // Actualizar el catálogo: restar la diferencia adicional o sumar si la cantidad disminuyó
+                                                for (Producto p : catalogo) {
+                                                    if (p.getId() == producto.getId()) {
+                                                        p.setExistencias(p.getExistencias() - diferencia);
+                                                        break;
+                                                    }
+                                                }
+                                                
+                                                System.out.println("Cantidad actualizada con éxito.");
+                                                idValido = true;
+                                            }
+                                        }
+                                    } else {
+                                        System.out.println("Error: Debe ingresar un número entero válido para la cantidad.");
+                                        scanner.next(); // Consumir la entrada inválida
+                                    }
+                                } catch (Exception e) {
+                                    System.err.println("Error al ingresar la cantidad: " + e.getMessage());
+                                    scanner.nextLine(); // Consumir la entrada inválida
+                                }
+                                break;
+                            }
+                        }
+                        
+                        if (!encontrado) {
+                            System.out.println("Error: No existe ningún producto con ID " + idProducto + " en el carrito.");
+                            // Mostrar los productos en el carrito para ayudar al usuario
+                            System.out.println("Productos en el carrito:");
+                            for (Producto p : carrito) {
+                                System.out.println("- ID: " + p.getId() + ", Nombre: " + p.getNombre());
+                            }
+                        }
+                    }
+                } else {
+                    System.out.println("Error: Debe ingresar un número entero válido para el ID.");
+                    scanner.next(); // Consumir la entrada inválida
+                }
+            } catch (Exception e) {
+                System.err.println("Error de entrada: " + e.getMessage());
+                scanner.nextLine(); // Consumir la entrada inválida
+            }
+            
+            if (!idValido) {
+                scanner.nextLine(); // Consumir el salto de línea si es necesario
+                System.out.print("¿Desea intentarlo de nuevo? (S/N): ");
+                String respuesta = scanner.next().trim().toUpperCase();
+                scanner.nextLine(); // Consumir el salto de línea
+                if (!respuesta.equals("S")) {
+                    return;
+                }
+            }
+        } while (!idValido);
     }
 
     private static void consultarCarrito() {
@@ -137,39 +391,189 @@ public class ClienteCarritoExtendido {
         }
 
         System.out.println("\n--- Carrito de Compras ---");
+        System.out.println("+-------+---------------------+-----------------------------+------------+---------+------------+");
+        System.out.println("| ID    | Nombre              | Descripción                 | Cantidad   | Precio  | Subtotal   |");
+        System.out.println("+-------+---------------------+-----------------------------+------------+---------+------------+");
+        
+        double total = 0.0;
         for (Producto producto : carrito) {
-            System.out.println(producto);
+            double subtotal = producto.getExistencias() * producto.getPrecio();
+            total += subtotal;
+            
+            System.out.printf("| %-5d | %-19s | %-27s | %-10d | $%-6.2f | $%-10.2f |\n",
+                    producto.getId(),
+                    limitarTexto(producto.getNombre(), 19),
+                    limitarTexto(producto.getDescripcion(), 27),
+                    producto.getExistencias(),
+                    producto.getPrecio(),
+                    subtotal);
         }
+        
+        System.out.println("+-------+---------------------+-----------------------------+------------+---------+------------+");
+        System.out.printf("| %63s | Total:    | $%-10.2f |\n", "", total);
+        System.out.println("+-----------------------------------------------------------------------+---------+------------+");
     }
-
-    private static void enviarImagenes(Socket socket) {
+    
+    private static String limitarTexto(String texto, int longitudMaxima) {
+        if (texto == null) {
+            return "";
+        }
+        if (texto.length() <= longitudMaxima) {
+            return texto;
+        } else {
+            return texto.substring(0, longitudMaxima - 3) + "...";
+        }
+    }private static void enviarImagenes(Socket socket) {
         try {
             Scanner scanner = new Scanner(System.in);
-            System.out.print("Ingrese la ruta de la imagen a enviar: ");
-            String ruta = scanner.nextLine();
-
-            File archivo = new File(ruta);
-            if (!archivo.exists() || archivo.isDirectory()) {
-                System.out.println("Archivo no válido.");
-                return;
+            ArrayList<File> imagenesValidas = new ArrayList<>();
+            boolean continuarEnviando = true;
+            
+            System.out.println("\n--- Envío de Imágenes al Servidor ---");
+            System.out.println("Puede enviar múltiples imágenes. Ingrese 'finalizar' cuando termine.");
+            
+            while (continuarEnviando) {
+                boolean archivoValido = false;
+                String ruta = "";
+                File archivo = null;
+                
+                do {
+                    System.out.print("\nIngrese la ruta de la imagen a enviar (o 'salir' para cancelar, 'finalizar' para terminar): ");
+                    ruta = scanner.nextLine().trim();
+                    
+                    // Verificar si el usuario desea cancelar o finalizar
+                    if (ruta.equalsIgnoreCase("salir")) {
+                        System.out.println("Operación cancelada por el usuario.");
+                        return;
+                    }
+                    
+                    if (ruta.equalsIgnoreCase("finalizar")) {
+                        if (imagenesValidas.isEmpty()) {
+                            System.out.println("No ha seleccionado ninguna imagen para enviar.");
+                            System.out.print("¿Desea intentar agregar una imagen? (S/N): ");
+                            String respuesta = scanner.nextLine().trim().toUpperCase();
+                            if (respuesta.equals("S")) {
+                                continue;
+                            } else {
+                                return;
+                            }
+                        } else {
+                            continuarEnviando = false;
+                            break;
+                        }
+                    }
+                    
+                    // 1. Validación de la ruta y existencia del archivo
+                    archivo = new File(ruta);
+                    if (!archivo.exists()) {
+                        System.out.println("Error: El archivo no existe.");
+                        continue;
+                    }
+                    
+                    if (archivo.isDirectory()) {
+                        System.out.println("Error: La ruta especificada es un directorio, no un archivo.");
+                        continue;
+                    }
+                    
+                    // 2. Validación del formato del archivo
+                    String nombreArchivo = archivo.getName().toLowerCase();
+                    if (!nombreArchivo.endsWith(".jpg") && !nombreArchivo.endsWith(".jpeg") && 
+                        !nombreArchivo.endsWith(".png") && !nombreArchivo.endsWith(".gif") && 
+                        !nombreArchivo.endsWith(".bmp")) {
+                        System.out.println("Error: El archivo debe tener una extensión de imagen válida (.jpg, .jpeg, .png, .gif, .bmp).");
+                        continue;
+                    }
+                    
+                    // 3. Validación de archivo no vacío
+                    if (archivo.length() == 0) {
+                        System.out.println("Error: El archivo está vacío.");
+                        continue;
+                    }
+                    
+                    // Validación adicional: Verificar que el archivo sea realmente una imagen
+                    try {
+                        FileInputStream testInput = new FileInputStream(archivo);
+                        byte[] header = new byte[8]; // Leemos solo unos bytes para verificar la "firma" del archivo
+                        int bytesRead = testInput.read(header);
+                        testInput.close();
+                        
+                        if (bytesRead < 4) {
+                            System.out.println("Error: El archivo es demasiado pequeño para ser una imagen válida.");
+                            continue;
+                        }
+                        
+                        // Verificación básica de firmas de archivo para formatos comunes
+                        boolean formatoValido = false;
+                        
+                        // JPEG: comienza con FF D8 FF
+                        if (header[0] == (byte)0xFF && header[1] == (byte)0xD8 && header[2] == (byte)0xFF) {
+                            formatoValido = true;
+                        }
+                        // PNG: comienza con 89 50 4E 47 (‰PNG)
+                        else if (header[0] == (byte)0x89 && header[1] == (byte)0x50 && 
+                                header[2] == (byte)0x4E && header[3] == (byte)0x47) {
+                            formatoValido = true;
+                        }
+                        // GIF: comienza con 47 49 46 38 (GIF8)
+                        else if (header[0] == (byte)0x47 && header[1] == (byte)0x49 && 
+                                header[2] == (byte)0x46 && header[3] == (byte)0x38) {
+                            formatoValido = true;
+                        }
+                        // BMP: comienza con 42 4D (BM)
+                        else if (header[0] == (byte)0x42 && header[1] == (byte)0x4D) {
+                            formatoValido = true;
+                        }
+                        
+                        if (!formatoValido) {
+                            System.out.println("Error: El archivo no parece ser una imagen válida a pesar de su extensión.");
+                            continue;
+                        }
+                    } catch (IOException e) {
+                        System.err.println("Error al leer el archivo para verificación: " + e.getMessage());
+                        continue;
+                    }
+                    
+                    archivoValido = true;
+                    imagenesValidas.add(archivo);
+                    System.out.println("Imagen '" + archivo.getName() + "' validada y agregada a la cola de envío.");
+                    
+                } while (!archivoValido);
             }
-
-            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-            dos.writeInt(1); // Número de archivos a enviar
-            dos.writeUTF(archivo.getName());
-            dos.writeLong(archivo.length());
-
-            FileInputStream fis = new FileInputStream(archivo);
-            byte[] buffer = new byte[1024];
-            int n;
-            while ((n = fis.read(buffer)) > 0) {
-                dos.write(buffer, 0, n);
+            
+            // Enviar todas las imágenes validadas
+            if (!imagenesValidas.isEmpty()) {
+                System.out.println("\nEnviando " + imagenesValidas.size() + " imagen(es) al servidor...");
+                
+                DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                dos.writeInt(imagenesValidas.size()); // Número de archivos a enviar
+                
+                for (File imagen : imagenesValidas) {
+                    System.out.println("\nEnviando imagen: " + imagen.getName() + " (" + (imagen.length() / 1024) + " KB)");
+                    dos.writeUTF(imagen.getName());
+                    dos.writeLong(imagen.length());
+    
+                    try (FileInputStream fis = new FileInputStream(imagen)) {
+                        byte[] buffer = new byte[1024];
+                        int n;
+                        long bytesEnviados = 0;
+                        long totalBytes = imagen.length();
+                        
+                        while ((n = fis.read(buffer)) > 0) {
+                            dos.write(buffer, 0, n);
+                            bytesEnviados += n;
+                            
+                            // Mostrar progreso
+                            int porcentaje = (int)((bytesEnviados * 100) / totalBytes);
+                            System.out.print("\rProgreso: " + porcentaje + "% completado");
+                        }
+                        System.out.println("\nImagen enviada correctamente.");
+                    }
+                }
+                System.out.println("\nTodas las imágenes han sido enviadas correctamente.");
             }
-            fis.close();
-            System.out.println("Imagen enviada correctamente.");
-
+            
         } catch (IOException e) {
-            System.err.println("Error al enviar la imagen: " + e.getMessage());
+            System.err.println("Error al enviar las imágenes: " + e.getMessage());
         }
     }
 
