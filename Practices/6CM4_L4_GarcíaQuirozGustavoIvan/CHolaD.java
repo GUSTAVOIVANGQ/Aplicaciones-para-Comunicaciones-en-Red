@@ -1,11 +1,9 @@
-package com.example.socketdatagrama;
-
 import java.net.*;
 import java.io.*;
 
 public class CHolaD {
     // Tamaño máximo del buffer para cada datagrama
-    private static final int BUFFER_SIZE = 1024;
+    private static final int BUFFER_SIZE = 8; // Cambiado de 1024 a 8 para pruebas
     // Número máximo de datagramas para un solo mensaje
     private static final int MAX_PACKETS = 100;
     // Marca de fin de mensaje
@@ -14,8 +12,8 @@ public class CHolaD {
     public static void main(String[] args){
         try{
             // Creamos el socket de datagrama del cliente
-            DatagramSocket cl = new DatagramSocket();
-            do{
+            DatagramSocket cl = new DatagramSocket();            // Bucle infinito para continuar enviando mensajes
+            for(;;) {
                 // Solicitar mensaje al usuario
                 System.out.print("Cliente iniciado, escriba un mensaje de saludo: ");
                 BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -34,9 +32,9 @@ public class CHolaD {
                     // Preparamos buffer para recibir datos
                     byte[] receiveBuffer = new byte[BUFFER_SIZE];
                     DatagramPacket p = new DatagramPacket(receiveBuffer, receiveBuffer.length);
-                    
-                    // Configuramos un tiempo límite para la recepción (5 segundos)
-                    cl.setSoTimeout(5000);
+
+                    // Configuramos un tiempo límite para la recepción (60 segundos)
+                    cl.setSoTimeout(60000);
                     
                     try {
                         // Esperamos recibir un datagrama
@@ -63,24 +61,22 @@ public class CHolaD {
                 
                 // Restauramos el timeout a infinito
                 cl.setSoTimeout(0);
-                
-                // Mostramos el mensaje recibido
+                  // Mostramos el mensaje recibido
                 if (messageBuilder.length() > 0) {
                     System.out.println("Respuesta del servidor: " + messageBuilder.toString());
                 } else {
                     System.out.println("No se recibió respuesta del servidor");
                 }
-                
-                // Preguntamos si queremos enviar otro mensaje
-                System.out.println("¿Desea enviar otro mensaje? (s/n)");
-                String resp = br.readLine();
-                if(resp.equals("n")){
-                    break;
+                  // Pequeña pausa antes de pedir el siguiente mensaje
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-            } while(true);
+            }
             
-            // Cerramos el socket
-            cl.close();
+            // Este código nunca se alcanzará, pero lo mantenemos por completitud
+            // cl.close();
         } catch(Exception e){
             e.printStackTrace();
         }

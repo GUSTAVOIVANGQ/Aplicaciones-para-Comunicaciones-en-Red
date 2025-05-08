@@ -1,87 +1,75 @@
-package com.example.socketdatagrama;
-
 import java.net.*;
 import java.io.*;
+import java.util.*;
 
-public class CHolaD {
+public class SHolaD {
     // Tamaño máximo del buffer para cada datagrama
-    private static final int BUFFER_SIZE = 1024;
+    private static final int BUFFER_SIZE = 8; // Cambiado de 1024 a 8 para pruebas
     // Número máximo de datagramas para un solo mensaje
     private static final int MAX_PACKETS = 100;
     // Marca de fin de mensaje
     private static final String END_MARKER = "##END##";
-    
-    public static void main(String[] args){
-        try{
-            // Creamos el socket de datagrama del cliente
-            DatagramSocket cl = new DatagramSocket();
-            do{
-                // Solicitar mensaje al usuario
-                System.out.print("Cliente iniciado, escriba un mensaje de saludo: ");
-                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-                String mensaje = br.readLine();
-                
-                // Enviar el mensaje al servidor, posiblemente en múltiples fragmentos
-                enviarMensaje(cl, mensaje, InetAddress.getByName("127.0.0.1"), 2000);
-                
-                // Recibir respuesta del servidor
-                System.out.println("Esperando respuesta del servidor...");
+
+    public static void main(String[] args) {
+        try {
+            // Creamos un socket de datagrama que escucha en el puerto 2000
+            DatagramSocket s = new DatagramSocket(2000);
+            System.out.println("Servidor iniciado, esperando cliente");
+            
+            // Mantenemos el servidor activo indefinidamente
+            for (;;) {
+                // Preparamos para recibir mensajes
+                InetAddress clientAddress = null;
+                int clientPort = 0;
                 StringBuilder messageBuilder = new StringBuilder();
                 boolean endOfMessage = false;
                 
-                // Recibimos todos los fragmentos de la respuesta
+                // Recibimos todos los fragmentos del mensaje
                 while (!endOfMessage) {
-                    // Preparamos buffer para recibir datos
+                    // Preparamos un buffer para recibir datos
                     byte[] receiveBuffer = new byte[BUFFER_SIZE];
                     DatagramPacket p = new DatagramPacket(receiveBuffer, receiveBuffer.length);
                     
-                    // Configuramos un tiempo límite para la recepción (5 segundos)
-                    cl.setSoTimeout(5000);
+                    // Esperamos a recibir un datagrama
+                    s.receive(p);
                     
-                    try {
-                        // Esperamos recibir un datagrama
-                        cl.receive(p);
-                        
-                        // Convertimos los bytes recibidos a String
-                        String fragmento = new String(p.getData(), 0, p.getLength());
-                        
-                        // Verificamos si es el último fragmento del mensaje
-                        if (fragmento.endsWith(END_MARKER)) {
-                            // Eliminamos el marcador de final
-                            fragmento = fragmento.substring(0, fragmento.length() - END_MARKER.length());
-                            endOfMessage = true;
-                        }
-                        
-                        // Agregamos el fragmento al mensaje completo
-                        messageBuilder.append(fragmento);
-                    } catch (SocketTimeoutException e) {
-                        // Si pasa el tiempo límite sin recibir nada, asumimos que es el fin del mensaje
-                        System.out.println("Tiempo de espera agotado, no hay más fragmentos");
+                    // Guardamos la dirección y puerto del cliente para responder después
+                    clientAddress = p.getAddress();
+                    clientPort = p.getPort();
+                    
+                    // Convertimos los bytes recibidos a String
+                    String fragmento = new String(p.getData(), 0, p.getLength());
+                    
+                    // Verificamos si es el último fragmento del mensaje
+                    if (fragmento.endsWith(END_MARKER)) {
+                        // Eliminamos el marcador de final y agregamos el contenido
+                        fragmento = fragmento.substring(0, fragmento.length() - END_MARKER.length());
                         endOfMessage = true;
                     }
+                    
+                    // Agregamos el fragmento al mensaje completo
+                    messageBuilder.append(fragmento);
                 }
                 
-                // Restauramos el timeout a infinito
-                cl.setSoTimeout(0);
+                // Mensaje completo recibido
+                String mensajeCompleto = messageBuilder.toString();
+                System.out.println("Datagrama recibido desde " + clientAddress + ":" + clientPort);
+                System.out.println("Con el mensaje: " + mensajeCompleto);
                 
-                // Mostramos el mensaje recibido
-                if (messageBuilder.length() > 0) {
-                    System.out.println("Respuesta del servidor: " + messageBuilder.toString());
-                } else {
-                    System.out.println("No se recibió respuesta del servidor");
-                }
+                // Preparamos para enviar respuesta
+                System.out.print("Servidor: Escriba un mensaje de respuesta: ");
+                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+                String respuesta = br.readLine();
+                  // Enviamos la respuesta, posiblemente en múltiples fragmentos
+                enviarMensaje(s, respuesta, clientAddress, clientPort);
                 
-                // Preguntamos si queremos enviar otro mensaje
-                System.out.println("¿Desea enviar otro mensaje? (s/n)");
-                String resp = br.readLine();
-                if(resp.equals("n")){
-                    break;
-                }
-            } while(true);
+                // El servidor continuará recibiendo mensajes automáticamente
+                System.out.println("Esperando nuevo mensaje...");
+                  }
             
-            // Cerramos el socket
-            cl.close();
-        } catch(Exception e){
+            // Este código nunca se alcanzará, pero lo mantenemos por completitud
+            // s.close();
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
